@@ -27,6 +27,15 @@ A warm single-page translator that focuses on Spanish/Russian → Polish. Paste 
 - Deploy the app to Railway; the table `word_entries` will be created automatically.
 - The **Saved dictionary** panel reads directly from this database.
 
+### Railway environment variables at a glance
+- `DATABASE_URL`: PostgreSQL connection string (falls back to local SQLite when empty).
+- `DEEPSEEK_API_KEY`: use DeepSeek as the primary translator (recommended for best accuracy).
+- `DEEPSEEK_MODEL`: optional override of the DeepSeek model (default `deepseek-chat`).
+- `DEEPSEEK_BASE_URL`: optional DeepSeek API base URL override (default `https://api.deepseek.com`).
+- `GOOGLE_TRANSLATE_API_KEY`: optional official Google Translate API key (used after DeepSeek if provided).
+- `LINGVA_ENDPOINT`: optional Lingva proxy base (default `https://lingva.ml`).
+- `LIBRETRANSLATE_URL`: optional self-hosted LibreTranslate base; app will still rotate through public instances.
+
 ## Configuration
 - `DATABASE_URL`: database connection string. Defaults to local SQLite file `translations.db`.
 - `LIBRETRANSLATE_URL`: override the primary translation endpoint if you self-host LibreTranslate; the app automatically falls back to public LibreTranslate instances if one endpoint is unreachable.
