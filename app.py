@@ -60,6 +60,14 @@ def detect_language(text: str) -> str:
     return "auto"
 
 
+def detect_any_language(text: str) -> str:
+    """Detect language without restricting to Russian/Spanish."""
+    try:
+        return detect(text)
+    except Exception:
+        return "auto"
+
+
 def translate_text(text: str, source_lang: str = "auto", target_lang: str = "pl") -> str:
     payload = {
         "q": text,
@@ -67,6 +75,13 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "pl"
         "target": target_lang,
         "format": "text",
     }
+
+    detected_any = detect_any_language(text)
+    # If source and target are the same (e.g., Polish helper sentences), avoid useless calls
+    if (source_lang != "auto" and source_lang == target_lang) or (
+        source_lang == "auto" and detected_any == target_lang
+    ):
+        return text
 
     # First try LibreTranslate instances
     for endpoint in LIBRETRANSLATE_ENDPOINTS:
@@ -83,10 +98,12 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "pl"
 
     # Fallback: MyMemory (free, public) to avoid full outages
     try:
-        # MyMemory needs an explicit pair. Let it auto-detect when we couldn't classify
-        # reliably (e.g., Polish example sentences) so we don't send wrong source hints.
-        src_guess = source_lang if source_lang in SUPPORTED_LANGS else detect_language(text)
-        src = src_guess if src_guess in SUPPORTED_LANGS else "auto"
+        # MyMemory needs an explicit pair; it does not accept "auto". Prefer a detected
+        # language, fall back to English as a neutral default for better resilience.
+        src_guess = source_lang if source_lang != "auto" else detected_any
+        src = src_guess if isinstance(src_guess, str) and len(src_guess) == 2 else "en"
+        if src == target_lang:
+            return text
         params = {"q": text, "langpair": f"{src}|{target_lang}"}
         response = requests.get(
             "https://api.mymemory.translated.net/get", params=params, timeout=15
@@ -98,6 +115,31 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "pl"
             return translated
     except Exception as exc:
         print(f"MyMemory fallback error for '{text}': {exc}")
+
+    # Final fallback: Google Translate public endpoint (unofficial but reliable)
+    try:
+        src = source_lang if source_lang != "auto" else detected_any
+        params = {
+            "client": "gtx",
+            "sl": src or "auto",
+            "tl": target_lang,
+            "dt": "t",
+            "q": text,
+        }
+        response = requests.get(
+            "https://translate.googleapis.com/translate_a/single",
+            params=params,
+            timeout=15,
+        )
+        response.raise_for_status()
+        data = response.json()
+        if isinstance(data, list) and data:
+            translated_chunks = [chunk[0] for chunk in data[0] if chunk and chunk[0]]
+            translated = " ".join(translated_chunks).strip()
+            if translated:
+                return translated
+    except Exception as exc:
+        print(f"Google fallback error for '{text}': {exc}")
 
     # If all endpoints fail, return empty string so the UI can show a friendly message
     return ""
