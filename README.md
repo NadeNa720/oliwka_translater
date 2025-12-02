@@ -3,9 +3,9 @@
 A warm single-page translator that focuses on Spanish/Russian → Polish. Paste words or bracketed phrases to get precise Polish translations, two example sentences with translations, and automatic grouping into nouns, verbs, adjectives, adverbs, or phrases. You can save entries to a database (PostgreSQL on Railway recommended; falls back to SQLite locally).
 
 ## Features
-- Auto-detects Spanish or Russian input and translates to Polish using **DeepSeek** (via your API key).
+- Auto-detects Spanish or Russian input and translates to Polish using **DeepSeek** (via your API key) with a structured prompt focused on accuracy.
 - Handles lists of words and bracketed phrases; phrases stay together and everything else is translated individually.
-- Produces two warm example sentences for each entry and translates them to Polish.
+- DeepSeek now returns two fresh, natural example sentences per entry (no repeated templates) and their Polish translations.
 - Displays results grouped into five categories (nouns, verbs, adjectives, adverbs, phrases/other).
 - Save any entry to the database and view saved words anytime.
 
@@ -42,5 +42,5 @@ A warm single-page translator that focuses on Spanish/Russian → Polish. Paste 
 
 ## Notes
 - Part-of-speech grouping uses expanded heuristics for Russian and Spanish endings plus phrase detection to better sort verbs/nouns/adjectives/adverbs. Bracketed items such as `(llegar a un acuerdo)` are kept intact and treated as phrases.
-- Translation uses DeepSeek exclusively now. Set `DEEPSEEK_API_KEY` so translations can run (the UI banner shows whether the key is detected).
+- Translation uses DeepSeek exclusively now with a structured JSON response that yields translation, part of speech, and two unique examples per word/phrase. Set `DEEPSEEK_API_KEY` so translations can run (the UI banner shows whether the key is detected).
 - SQLAlchemy is pinned to `2.0.38` for Python 3.13 compatibility; reinstall dependencies if you hit import errors on Railway.

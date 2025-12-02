@@ -76,26 +76,42 @@ def detect_any_language(text: str) -> str:
         return "auto"
 
 
-def translate_text(text: str, source_lang: str = "auto", target_lang: str = "pl") -> str:
+def translate_with_examples(text: str, source_lang: str = "auto", target_lang: str = "pl") -> Dict[str, str]:
+    """Use DeepSeek to get a translation, examples, and part of speech in one call."""
+
     detected_any = detect_any_language(text)
-    # If source and target are the same (e.g., Polish helper sentences), avoid useless calls
     if (source_lang != "auto" and source_lang == target_lang) or (
         source_lang == "auto" and detected_any == target_lang
     ):
-        return text
+        return {
+            "translation": text,
+            "examples": [],
+            "part_of_speech": "phrases",
+        }
 
     if not DEEPSEEK_API_KEY:
-        return "(DeepSeek API key is not configured)"
+        return {
+            "translation": "(DeepSeek API key is not configured)",
+            "examples": [],
+            "part_of_speech": "phrases",
+        }
+
+    src = source_lang if source_lang != "auto" else detected_any or "auto"
+    system_prompt = (
+        "You are a precise, concise translator for Spanish or Russian into Polish. "
+        "Respond ONLY with valid JSON."
+    )
+    user_prompt = (
+        "Return a compact JSON object with fields: translation (Polish), part_of_speech "
+        "(nouns, verbs, adjectives, adverbs, phrases), and examples (two natural sentences "
+        "in the source language that use the word/phrase correctly, each with a Polish "
+        "translation). Avoid literal word-by-word Polish; keep it natural. Use warm, everyday "
+        "tone. Do not include any text outside JSON. Example structure: {\"translation\": "
+        "\"...\", \"part_of_speech\": \"verbs\", \"examples\": [{\"source\": \"...\", \"target\": \"...\"}, {\"source\": \"...\", \"target\": \"...\"}]}. "
+        f"Source language: {src}. Target language: {target_lang}. Text: {text}"
+    )
 
     try:
-        src = source_lang if source_lang != "auto" else detected_any or "auto"
-        system_prompt = (
-            "You are a precise translation engine. Return only the translated text in Polish."
-        )
-        user_prompt = (
-            "Translate to Polish. If a source language is provided, respect it. "
-            f"Source language: {src}. Text: {text}"
-        )
         response = requests.post(
             f"{DEEPSEEK_BASE_URL}/v1/chat/completions",
             headers={
@@ -108,25 +124,28 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "pl"
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                "temperature": 0.2,
-                "max_tokens": 400,
+                "temperature": 0.15,
+                "max_tokens": 500,
             },
-            timeout=20,
+            timeout=25,
         )
         response.raise_for_status()
         data = response.json()
-        translated = (
-            data.get("choices", [{}])[0]
-            .get("message", {})
-            .get("content", "")
-            .strip()
+        content = (
+            data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
         )
-        if translated:
-            return translated
+        parsed = json.loads(content)
+        translation = parsed.get("translation", "").strip()
+        examples = parsed.get("examples", []) or []
+        pos = parsed.get("part_of_speech", "phrases").lower()
+        return {
+            "translation": translation,
+            "examples": examples,
+            "part_of_speech": pos,
+        }
     except Exception as exc:
         print(f"DeepSeek translation error for '{text}': {exc}")
-
-    return ""
+        return {"translation": "", "examples": [], "part_of_speech": "phrases"}
 
 
 def classify_part_of_speech(word: str, lang: str, is_phrase: bool) -> str:
@@ -178,8 +197,8 @@ def classify_part_of_speech(word: str, lang: str, is_phrase: bool) -> str:
     return "phrases"
 
 
-def generate_examples(word: str, lang: str) -> List[Dict[str, str]]:
-    """Generate two warm, simple sentences using the word and translate them."""
+def fallback_examples(word: str, lang: str) -> List[Dict[str, str]]:
+    """Warm hardcoded examples used only when DeepSeek returns nothing."""
     sentence_templates = {
         "es": [
             f"Siempre trato de {word} para sentirme en paz.",
@@ -195,11 +214,7 @@ def generate_examples(word: str, lang: str) -> List[Dict[str, str]]:
         ],
     }
     templates = sentence_templates.get(lang, sentence_templates["auto"])
-    examples = []
-    for sentence in templates:
-        translated = translate_text(sentence, source_lang=lang if lang in SUPPORTED_LANGS else "auto")
-        examples.append({"source": sentence, "target": translated or ""})
-    return examples
+    return [{"source": s, "target": ""} for s in templates]
 
 
 def parse_entries(raw: str) -> List[str]:
@@ -244,11 +259,25 @@ def translate_route():
         "phrases": [],
     }
 
+    allowed_pos = {"nouns", "verbs", "adjectives", "adverbs", "phrases"}
+
     for entry in entries:
         lang = detect_language(entry)
-        translations = translate_text(entry, source_lang=lang)
-        pos = classify_part_of_speech(entry, lang, is_phrase=" " in entry)
-        examples = generate_examples(entry, lang)
+        ds_response = translate_with_examples(entry, source_lang=lang)
+        translations = ds_response.get("translation", "")
+        pos_raw = (ds_response.get("part_of_speech") or "phrases").strip().lower()
+        pos_aliases = {
+            "verb": "verbs",
+            "noun": "nouns",
+            "adjective": "adjectives",
+            "adverb": "adverbs",
+            "phrase": "phrases",
+            "phrases/other": "phrases",
+        }
+        pos = pos_aliases.get(pos_raw, pos_raw)
+        if pos not in allowed_pos:
+            pos = classify_part_of_speech(entry, lang, is_phrase=" " in entry)
+        examples = ds_response.get("examples") or fallback_examples(entry, lang)
         grouped[pos].append(
             {
                 "word": entry,
