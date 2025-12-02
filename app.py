@@ -60,6 +60,10 @@ def detect_language(text: str) -> str:
     if re.search("[áéíóúñÁÉÍÓÚÑ]", text):
         return "es"
 
+    # Spanish verb endings often appear in raw input even when users add Polish hints
+    if re.search(r"(ar|er|ir)$", text.lower()):
+        return "es"
+
     lowered = text.lower()
     # Common Spanish function words to capture short phrases that langdetect mislabels
     if re.search(r"\b(el|la|los|las|un|una|que|de|y|por|para|con)\b", lowered):
@@ -218,6 +222,11 @@ def parse_entries(raw: str) -> List[str]:
         word = token.strip()
         if not word:
             continue
+        # Drop in-line glosses like "explicar — rozwinięcie" so detection works
+        if "—" in word:
+            word = word.split("—", 1)[0].strip()
+        elif " - " in word:
+            word = word.split(" - ", 1)[0].strip()
         if word.startswith("(") and word.endswith(")"):
             word = word[1:-1].strip()
         entries.append(word)
