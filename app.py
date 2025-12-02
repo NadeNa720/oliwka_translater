@@ -83,10 +83,10 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "pl"
 
     # Fallback: MyMemory (free, public) to avoid full outages
     try:
-        # MyMemory requires an explicit language pair; if we couldn't detect, assume Russian
-        src = source_lang if source_lang in SUPPORTED_LANGS else detect_language(text)
-        if src not in SUPPORTED_LANGS:
-            src = "ru"
+        # MyMemory needs an explicit pair. Let it auto-detect when we couldn't classify
+        # reliably (e.g., Polish example sentences) so we don't send wrong source hints.
+        src_guess = source_lang if source_lang in SUPPORTED_LANGS else detect_language(text)
+        src = src_guess if src_guess in SUPPORTED_LANGS else "auto"
         params = {"q": text, "langpair": f"{src}|{target_lang}"}
         response = requests.get(
             "https://api.mymemory.translated.net/get", params=params, timeout=15
