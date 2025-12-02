@@ -51,6 +51,18 @@ SUPPORTED_LANGS = {"ru", "es"}
 
 def detect_language(text: str) -> str:
     """Detect language between Russian and Spanish; default to auto if unclear."""
+    # Quick alphabet checks to avoid misclassifying Spanish as Polish
+    if re.search("[\u0400-\u04FF]", text):  # Cyrillic block
+        return "ru"
+
+    if re.search("[áéíóúñÁÉÍÓÚÑ]", text):
+        return "es"
+
+    lowered = text.lower()
+    # Common Spanish function words to capture short phrases that langdetect mislabels
+    if re.search(r"\b(el|la|los|las|un|una|que|de|y|por|para|con)\b", lowered):
+        return "es"
+
     try:
         lang = detect(text)
         if lang in SUPPORTED_LANGS:
@@ -83,7 +95,32 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "pl"
     ):
         return text
 
-    # First try LibreTranslate instances
+    # Primary: Google Translate public endpoint (more reliable than unstable Libre hosts)
+    try:
+        src = source_lang if source_lang != "auto" else detected_any
+        params = {
+            "client": "gtx",
+            "sl": src or "auto",
+            "tl": target_lang,
+            "dt": "t",
+            "q": text,
+        }
+        response = requests.get(
+            "https://translate.googleapis.com/translate_a/single",
+            params=params,
+            timeout=15,
+        )
+        response.raise_for_status()
+        data = response.json()
+        if isinstance(data, list) and data:
+            translated_chunks = [chunk[0] for chunk in data[0] if chunk and chunk[0]]
+            translated = " ".join(translated_chunks).strip()
+            if translated:
+                return translated
+    except Exception as exc:
+        print(f"Google translation error for '{text}': {exc}")
+
+    # Secondary: LibreTranslate instances
     for endpoint in LIBRETRANSLATE_ENDPOINTS:
         try:
             response = requests.post(f"{endpoint}/translate", data=payload, timeout=15)
@@ -115,31 +152,6 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "pl"
             return translated
     except Exception as exc:
         print(f"MyMemory fallback error for '{text}': {exc}")
-
-    # Final fallback: Google Translate public endpoint (unofficial but reliable)
-    try:
-        src = source_lang if source_lang != "auto" else detected_any
-        params = {
-            "client": "gtx",
-            "sl": src or "auto",
-            "tl": target_lang,
-            "dt": "t",
-            "q": text,
-        }
-        response = requests.get(
-            "https://translate.googleapis.com/translate_a/single",
-            params=params,
-            timeout=15,
-        )
-        response.raise_for_status()
-        data = response.json()
-        if isinstance(data, list) and data:
-            translated_chunks = [chunk[0] for chunk in data[0] if chunk and chunk[0]]
-            translated = " ".join(translated_chunks).strip()
-            if translated:
-                return translated
-    except Exception as exc:
-        print(f"Google fallback error for '{text}': {exc}")
 
     # If all endpoints fail, return empty string so the UI can show a friendly message
     return ""

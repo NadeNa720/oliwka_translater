@@ -3,7 +3,7 @@
 A warm single-page translator that focuses on Spanish/Russian → Polish. Paste words or bracketed phrases to get precise Polish translations, two example sentences with translations, and automatic grouping into nouns, verbs, adjectives, adverbs, or phrases. You can save entries to a database (PostgreSQL on Railway recommended; falls back to SQLite locally).
 
 ## Features
-- Auto-detects Spanish or Russian input and translates to Polish using the free [LibreTranslate](https://libretranslate.de) service (no API key required by default).
+- Auto-detects Spanish or Russian input and translates to Polish using a reliable free chain (Google public endpoint first, then LibreTranslate/MyMemory fallbacks).
 - Handles lists of words and bracketed phrases; phrases stay together and everything else is translated individually.
 - Produces two warm example sentences for each entry and translates them to Polish.
 - Displays results grouped into five categories (nouns, verbs, adjectives, adverbs, phrases/other).
@@ -34,5 +34,5 @@ A warm single-page translator that focuses on Spanish/Russian → Polish. Paste 
 
 ## Notes
 - Part-of-speech grouping uses lightweight heuristics for Russian and Spanish plus phrase detection. Bracketed items such as `(llegar a un acuerdo)` are kept intact and treated as phrases.
-- LibreTranslate is free but public instances may enforce fair-use limits. For unlimited usage, point `LIBRETRANSLATE_URL` to your own LibreTranslate deployment; built-in fallbacks to public instances (translate.astian.org, libretranslate.de, translate.argosopentech.com) keep translations available when one instance is down. If every LibreTranslate instance is unavailable, the app will fall back to the free MyMemory API and, finally, an unofficial Google Translate endpoint for extra resilience.
+- Translation order prioritizes the Google public endpoint (no key) for stability, then retries public LibreTranslate instances, and finally uses the free MyMemory API. Override `LIBRETRANSLATE_URL` if you self-host LibreTranslate.
 - SQLAlchemy is pinned to `2.0.38` for Python 3.13 compatibility; reinstall dependencies if you hit import errors on Railway.
