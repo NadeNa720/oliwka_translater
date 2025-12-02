@@ -68,6 +68,7 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "pl"
         "format": "text",
     }
 
+    # First try LibreTranslate instances
     for endpoint in LIBRETRANSLATE_ENDPOINTS:
         try:
             response = requests.post(f"{endpoint}/translate", data=payload, timeout=15)
@@ -79,6 +80,24 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "pl"
         except Exception as exc:
             print(f"Translation error for '{text}' via {endpoint}: {exc}")
             continue
+
+    # Fallback: MyMemory (free, public) to avoid full outages
+    try:
+        # MyMemory requires an explicit language pair; if we couldn't detect, assume Russian
+        src = source_lang if source_lang in SUPPORTED_LANGS else detect_language(text)
+        if src not in SUPPORTED_LANGS:
+            src = "ru"
+        params = {"q": text, "langpair": f"{src}|{target_lang}"}
+        response = requests.get(
+            "https://api.mymemory.translated.net/get", params=params, timeout=15
+        )
+        response.raise_for_status()
+        data = response.json()
+        translated = data.get("responseData", {}).get("translatedText", "")
+        if translated:
+            return translated
+    except Exception as exc:
+        print(f"MyMemory fallback error for '{text}': {exc}")
 
     # If all endpoints fail, return empty string so the UI can show a friendly message
     return ""
