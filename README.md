@@ -35,3 +35,4 @@ A warm single-page translator that focuses on Spanish/Russian → Polish. Paste 
 ## Notes
 - Part-of-speech grouping uses lightweight heuristics for Russian and Spanish plus phrase detection. Bracketed items such as `(llegar a un acuerdo)` are kept intact and treated as phrases.
 - LibreTranslate is free but public instances may enforce fair-use limits. For unlimited usage, point `LIBRETRANSLATE_URL` to your own LibreTranslate deployment.
+- SQLAlchemy is pinned to `2.0.38` for Python 3.13 compatibility; reinstall dependencies if you hit import errors on Railway.
