@@ -3,6 +3,7 @@ const translateBtn = document.getElementById("translate-btn");
 const resultsEl = document.getElementById("results");
 const savedList = document.getElementById("saved-list");
 const refreshSavedBtn = document.getElementById("refresh-saved");
+const statusBanner = document.getElementById("status-banner");
 
 function createExampleBlock(example) {
   const wrapper = document.createElement("div");
@@ -106,6 +107,27 @@ async function loadSaved() {
   });
 }
 
+async function loadStatus() {
+  try {
+    const response = await fetch("/api/status");
+    const data = await response.json();
+    if (data.deepseek_configured) {
+      statusBanner.textContent = "DeepSeek API key detected: translations ready.";
+      statusBanner.classList.remove("warn", "muted");
+      statusBanner.classList.add("ok");
+    } else {
+      statusBanner.textContent =
+        "DeepSeek API key is NOT configured. Set DEEPSEEK_API_KEY in Railway/env so translations can run.";
+      statusBanner.classList.remove("ok");
+      statusBanner.classList.add("warn");
+    }
+  } catch (error) {
+    statusBanner.textContent = "Unable to check DeepSeek key status.";
+    statusBanner.classList.add("warn");
+  }
+}
+
 translateBtn.addEventListener("click", translate);
 refreshSavedBtn.addEventListener("click", loadSaved);
+loadStatus();
 loadSaved();

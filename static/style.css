@@ -53,6 +53,26 @@ body {
   margin: 0 0 4px;
 }
 
+.status-banner {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff9f5;
+}
+
+.status-banner.ok {
+  color: #0f5132;
+  background: #d1e7dd;
+  border-color: #badbcc;
+}
+
+.status-banner.warn {
+  color: #8a6d3b;
+  background: #fff3cd;
+  border-color: #ffecb5;
+}
+
 .card {
   margin-top: 24px;
   background: var(--card);
