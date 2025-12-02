@@ -36,6 +36,7 @@ Base.metadata.create_all(bind=engine)
 # LibreTranslate endpoints (primary + fallbacks)
 _primary_endpoint = os.getenv("LIBRETRANSLATE_URL")
 LINGVA_ENDPOINT = os.getenv("LINGVA_ENDPOINT", "https://lingva.ml")
+GOOGLE_API_KEY = os.getenv("GOOGLE_TRANSLATE_API_KEY")
 LIBRETRANSLATE_ENDPOINTS = [
     endpoint
     for endpoint in [
@@ -101,7 +102,31 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "pl"
     ):
         return text
 
-    # Primary: Google via deep_translator (handles language auto-detect internally)
+    # Primary: Official Google Translate API if an API key is present
+    if GOOGLE_API_KEY:
+        try:
+            params = {
+                "q": text,
+                "target": target_lang,
+                "format": "text",
+                "key": GOOGLE_API_KEY,
+            }
+            if source_lang != "auto":
+                params["source"] = source_lang
+            response = requests.post(
+                "https://translation.googleapis.com/language/translate/v2",
+                data=params,
+                timeout=15,
+            )
+            response.raise_for_status()
+            data = response.json()
+            translated = data.get("data", {}).get("translations", [{}])[0].get("translatedText", "")
+            if translated:
+                return translated
+        except Exception as exc:
+            print(f"Google API translation error for '{text}': {exc}")
+
+    # Secondary: Google via deep_translator (handles language auto-detect internally)
     try:
         src = source_lang if source_lang != "auto" else detected_any or "auto"
         translated = GoogleTranslator(source=src, target=target_lang).translate(text)
@@ -110,7 +135,7 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "pl"
     except Exception as exc:
         print(f"Deep-translator Google error for '{text}': {exc}")
 
-    # Secondary: Lingva (Google-compatible proxy with free public instances)
+    # Next: Lingva (Google-compatible proxy with free public instances)
     try:
         src = source_lang if source_lang != "auto" else detected_any or "auto"
         quoted = requests.utils.quote(text)
@@ -124,7 +149,7 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "pl"
     except Exception as exc:
         print(f"Lingva translation error for '{text}': {exc}")
 
-    # Tertiary: LibreTranslate instances
+    # Then: LibreTranslate instances
     for endpoint in LIBRETRANSLATE_ENDPOINTS:
         try:
             response = requests.post(f"{endpoint}/translate", data=payload, timeout=15)
@@ -165,27 +190,47 @@ def classify_part_of_speech(word: str, lang: str, is_phrase: bool) -> str:
     if is_phrase or " " in word:
         return "phrases"
 
-    # Simple heuristics for Spanish
+    cleaned = re.sub(r"[.,;:!?]$", "", word.lower())
+
     if lang == "es":
-        if word.endswith("mente"):
+        # Adverbs typically end with -mente
+        if cleaned.endswith("mente"):
             return "adverbs"
-        if word.endswith("o") or word.endswith("a") or word.endswith("e"):
-            # could be noun or adjective; we will mark adjectives if ends with -oso/-osa
-            if word.endswith("oso") or word.endswith("osa"):
-                return "adjectives"
-            return "nouns"
-        if word.endswith("ar") or word.endswith("er") or word.endswith("ir"):
+
+        # Verb gerunds and participles
+        if cleaned.endswith(("ando", "iendo", "ado", "ido")):
             return "verbs"
-    # Simple heuristics for Russian
-    if lang == "ru":
-        if word.endswith("о"):
-            return "adverbs"
-        if word.endswith("ый") or word.endswith("ая") or word.endswith("ое"):
+
+        # Infinitive verbs (including reflexive forms)
+        if cleaned.endswith(("ar", "er", "ir", "arse", "erse", "irse")):
+            return "verbs"
+
+        # Adjectival endings
+        if cleaned.endswith(("oso", "osa", "ivo", "iva", "able", "ible", "al", "ario", "aria")):
             return "adjectives"
-        if word.endswith("ть") or word.endswith("ться"):
-            return "verbs"
-        if word.endswith("н") or word.endswith("а") or word.endswith("о") or word.endswith("е"):
+
+        # Common noun suffixes
+        if cleaned.endswith(("ción", "sión", "dad", "tad", "ura", "aje", "ez", "eza")):
             return "nouns"
+
+        # Default for Spanish single words: noun
+        return "nouns"
+
+    if lang == "ru":
+        # Adverbs
+        if cleaned.endswith("о"):
+            return "adverbs"
+
+        # Adjectives (full and short forms)
+        if cleaned.endswith(("ый", "ий", "ой", "ая", "яя", "ое", "ее", "ие", "ые")):
+            return "adjectives"
+
+        # Verbs (infinitives and common present/future endings)
+        if cleaned.endswith(("ть", "ти", "чь", "ться", "тись", "ют", "ет", "ут", "ат", "ят", "ешь", "ишь", "им", "ем")):
+            return "verbs"
+
+        # Nouns (default for single Russian words)
+        return "nouns"
 
     return "phrases"
 
