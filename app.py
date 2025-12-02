@@ -37,6 +37,9 @@ Base.metadata.create_all(bind=engine)
 _primary_endpoint = os.getenv("LIBRETRANSLATE_URL")
 LINGVA_ENDPOINT = os.getenv("LINGVA_ENDPOINT", "https://lingva.ml")
 GOOGLE_API_KEY = os.getenv("GOOGLE_TRANSLATE_API_KEY")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
 LIBRETRANSLATE_ENDPOINTS = [
     endpoint
     for endpoint in [
@@ -101,6 +104,47 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "pl"
         source_lang == "auto" and detected_any == target_lang
     ):
         return text
+
+    # Premium: DeepSeek API when a key is configured
+    if DEEPSEEK_API_KEY:
+        try:
+            src = source_lang if source_lang != "auto" else detected_any or "auto"
+            system_prompt = (
+                "You are a precise translation engine. Return only the translated text in Polish."
+            )
+            user_prompt = (
+                "Translate to Polish. If a source language is provided, respect it. "
+                f"Source language: {src}. Text: {text}"
+            )
+            response = requests.post(
+                f"{DEEPSEEK_BASE_URL}/v1/chat/completions",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+                },
+                json={
+                    "model": DEEPSEEK_MODEL,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    "temperature": 0.2,
+                    "max_tokens": 400,
+                },
+                timeout=20,
+            )
+            response.raise_for_status()
+            data = response.json()
+            translated = (
+                data.get("choices", [{}])[0]
+                .get("message", {})
+                .get("content", "")
+                .strip()
+            )
+            if translated:
+                return translated
+        except Exception as exc:
+            print(f"DeepSeek translation error for '{text}': {exc}")
 
     # Primary: Official Google Translate API if an API key is present
     if GOOGLE_API_KEY:

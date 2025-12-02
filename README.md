@@ -3,7 +3,7 @@
 A warm single-page translator that focuses on Spanish/Russian → Polish. Paste words or bracketed phrases to get precise Polish translations, two example sentences with translations, and automatic grouping into nouns, verbs, adjectives, adverbs, or phrases. You can save entries to a database (PostgreSQL on Railway recommended; falls back to SQLite locally).
 
 ## Features
-- Auto-detects Spanish or Russian input and translates to Polish using a reliable chain (official Google API with your key or deep-translator Google first, then Lingva, LibreTranslate, and MyMemory fallbacks).
+- Auto-detects Spanish or Russian input and translates to Polish using a reliable chain (DeepSeek with your API key first, then official Google API, deep-translator Google, Lingva, LibreTranslate, and MyMemory fallbacks).
 - Handles lists of words and bracketed phrases; phrases stay together and everything else is translated individually.
 - Produces two warm example sentences for each entry and translates them to Polish.
 - Displays results grouped into five categories (nouns, verbs, adjectives, adverbs, phrases/other).
@@ -31,10 +31,13 @@ A warm single-page translator that focuses on Spanish/Russian → Polish. Paste 
 - `DATABASE_URL`: database connection string. Defaults to local SQLite file `translations.db`.
 - `LIBRETRANSLATE_URL`: override the primary translation endpoint if you self-host LibreTranslate; the app automatically falls back to public LibreTranslate instances if one endpoint is unreachable.
 - `LINGVA_ENDPOINT`: optional Lingva base URL (defaults to `https://lingva.ml`) used as a free proxy before LibreTranslate/MyMemory if Google is unavailable.
-- `GOOGLE_TRANSLATE_API_KEY`: optional official Google Translate API key. When set, translations will use the paid API first for the best quality and language detection, then fall back to free providers.
+- `DEEPSEEK_API_KEY`: optional DeepSeek API key. When set, translations will use DeepSeek first for the most accurate output.
+- `DEEPSEEK_MODEL`: override the DeepSeek model name (defaults to `deepseek-chat`).
+- `DEEPSEEK_BASE_URL`: override the DeepSeek API base (defaults to `https://api.deepseek.com`).
+- `GOOGLE_TRANSLATE_API_KEY`: optional official Google Translate API key. When set (and when DeepSeek is unavailable), translations will use the paid API for high quality and language detection, then fall back to free providers.
 - `PORT`: port for the Flask server (defaults to `5000`).
 
 ## Notes
 - Part-of-speech grouping uses expanded heuristics for Russian and Spanish endings plus phrase detection to better sort verbs/nouns/adjectives/adverbs. Bracketed items such as `(llegar a un acuerdo)` are kept intact and treated as phrases.
-- Translation order now prioritizes the official Google API (if `GOOGLE_TRANSLATE_API_KEY` is set), then the deep-translator Google client, Lingva as a Google-compatible free proxy, public LibreTranslate instances, and finally the free MyMemory API. Override `LIBRETRANSLATE_URL` if you self-host LibreTranslate, and `LINGVA_ENDPOINT` if you run your own Lingva instance.
+- Translation order now prioritizes DeepSeek (when `DEEPSEEK_API_KEY` is set), then the official Google API (if `GOOGLE_TRANSLATE_API_KEY` is set), the deep-translator Google client, Lingva as a Google-compatible free proxy, public LibreTranslate instances, and finally the free MyMemory API. Override `LIBRETRANSLATE_URL` if you self-host LibreTranslate, and `LINGVA_ENDPOINT` if you run your own Lingva instance.
 - SQLAlchemy is pinned to `2.0.38` for Python 3.13 compatibility; reinstall dependencies if you hit import errors on Railway.
