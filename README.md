@@ -29,10 +29,10 @@ A warm single-page translator that focuses on Spanish/Russian → Polish. Paste 
 
 ## Configuration
 - `DATABASE_URL`: database connection string. Defaults to local SQLite file `translations.db`.
-- `LIBRETRANSLATE_URL`: override the translation endpoint if you self-host LibreTranslate.
+- `LIBRETRANSLATE_URL`: override the primary translation endpoint if you self-host LibreTranslate; the app automatically falls back to public LibreTranslate instances if one endpoint is unreachable.
 - `PORT`: port for the Flask server (defaults to `5000`).
 
 ## Notes
 - Part-of-speech grouping uses lightweight heuristics for Russian and Spanish plus phrase detection. Bracketed items such as `(llegar a un acuerdo)` are kept intact and treated as phrases.
-- LibreTranslate is free but public instances may enforce fair-use limits. For unlimited usage, point `LIBRETRANSLATE_URL` to your own LibreTranslate deployment.
+- LibreTranslate is free but public instances may enforce fair-use limits. For unlimited usage, point `LIBRETRANSLATE_URL` to your own LibreTranslate deployment; built-in fallbacks to public instances (translate.astian.org, libretranslate.de, translate.argosopentech.com) keep translations available when one instance is down.
 - SQLAlchemy is pinned to `2.0.38` for Python 3.13 compatibility; reinstall dependencies if you hit import errors on Railway.

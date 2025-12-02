@@ -32,7 +32,18 @@ class WordEntry(Base):
 
 Base.metadata.create_all(bind=engine)
 
-LIBRETRANSLATE_URL = os.getenv("LIBRETRANSLATE_URL", "https://libretranslate.de")
+# LibreTranslate endpoints (primary + fallbacks)
+_primary_endpoint = os.getenv("LIBRETRANSLATE_URL")
+LIBRETRANSLATE_ENDPOINTS = [
+    endpoint
+    for endpoint in [
+        _primary_endpoint,
+        "https://translate.astian.org",
+        "https://libretranslate.de",
+        "https://translate.argosopentech.com",
+    ]
+    if endpoint
+]
 SUPPORTED_LANGS = {"ru", "es"}
 
 
@@ -56,14 +67,21 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "pl"
         "target": target_lang,
         "format": "text",
     }
-    try:
-        response = requests.post(f"{LIBRETRANSLATE_URL}/translate", data=payload, timeout=15)
-        response.raise_for_status()
-        data = response.json()
-        return data.get("translatedText", "")
-    except Exception as exc:
-        print(f"Translation error for '{text}': {exc}")
-        return ""
+
+    for endpoint in LIBRETRANSLATE_ENDPOINTS:
+        try:
+            response = requests.post(f"{endpoint}/translate", data=payload, timeout=15)
+            response.raise_for_status()
+            data = response.json()
+            translated = data.get("translatedText", "")
+            if translated:
+                return translated
+        except Exception as exc:
+            print(f"Translation error for '{text}' via {endpoint}: {exc}")
+            continue
+
+    # If all endpoints fail, return empty string so the UI can show a friendly message
+    return ""
 
 
 def classify_part_of_speech(word: str, lang: str, is_phrase: bool) -> str:
