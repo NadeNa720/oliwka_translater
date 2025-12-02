@@ -3,7 +3,7 @@
 A warm single-page translator that focuses on Spanish/Russian → Polish. Paste words or bracketed phrases to get precise Polish translations, two example sentences with translations, and automatic grouping into nouns, verbs, adjectives, adverbs, or phrases. You can save entries to a database (PostgreSQL on Railway recommended; falls back to SQLite locally).
 
 ## Features
-- Auto-detects Spanish or Russian input and translates to Polish using a reliable free chain (Google public endpoint first, then LibreTranslate/MyMemory fallbacks).
+- Auto-detects Spanish or Russian input and translates to Polish using a reliable free chain (Google via deep-translator first, then Lingva, LibreTranslate, and MyMemory fallbacks).
 - Handles lists of words and bracketed phrases; phrases stay together and everything else is translated individually.
 - Produces two warm example sentences for each entry and translates them to Polish.
 - Displays results grouped into five categories (nouns, verbs, adjectives, adverbs, phrases/other).
@@ -30,9 +30,10 @@ A warm single-page translator that focuses on Spanish/Russian → Polish. Paste 
 ## Configuration
 - `DATABASE_URL`: database connection string. Defaults to local SQLite file `translations.db`.
 - `LIBRETRANSLATE_URL`: override the primary translation endpoint if you self-host LibreTranslate; the app automatically falls back to public LibreTranslate instances if one endpoint is unreachable.
+- `LINGVA_ENDPOINT`: optional Lingva base URL (defaults to `https://lingva.ml`) used as a free proxy before LibreTranslate/MyMemory if Google is unavailable.
 - `PORT`: port for the Flask server (defaults to `5000`).
 
 ## Notes
 - Part-of-speech grouping uses lightweight heuristics for Russian and Spanish plus phrase detection. Bracketed items such as `(llegar a un acuerdo)` are kept intact and treated as phrases.
-- Translation order prioritizes the Google public endpoint (no key) for stability, then retries public LibreTranslate instances, and finally uses the free MyMemory API. Override `LIBRETRANSLATE_URL` if you self-host LibreTranslate.
+- Translation order now prioritizes the deep-translator Google client (no key), then Lingva as a Google-compatible free proxy, then public LibreTranslate instances, and finally the free MyMemory API. Override `LIBRETRANSLATE_URL` if you self-host LibreTranslate, and `LINGVA_ENDPOINT` if you run your own Lingva instance.
 - SQLAlchemy is pinned to `2.0.38` for Python 3.13 compatibility; reinstall dependencies if you hit import errors on Railway.

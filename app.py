@@ -4,6 +4,7 @@ import re
 from typing import Dict, List
 
 import requests
+from deep_translator import GoogleTranslator
 from flask import Flask, jsonify, render_template, request
 from langdetect import detect
 from sqlalchemy import Column, Integer, String, create_engine
@@ -34,6 +35,7 @@ Base.metadata.create_all(bind=engine)
 
 # LibreTranslate endpoints (primary + fallbacks)
 _primary_endpoint = os.getenv("LIBRETRANSLATE_URL")
+LINGVA_ENDPOINT = os.getenv("LINGVA_ENDPOINT", "https://lingva.ml")
 LIBRETRANSLATE_ENDPOINTS = [
     endpoint
     for endpoint in [
@@ -95,32 +97,30 @@ def translate_text(text: str, source_lang: str = "auto", target_lang: str = "pl"
     ):
         return text
 
-    # Primary: Google Translate public endpoint (more reliable than unstable Libre hosts)
+    # Primary: Google via deep_translator (handles language auto-detect internally)
     try:
-        src = source_lang if source_lang != "auto" else detected_any
-        params = {
-            "client": "gtx",
-            "sl": src or "auto",
-            "tl": target_lang,
-            "dt": "t",
-            "q": text,
-        }
-        response = requests.get(
-            "https://translate.googleapis.com/translate_a/single",
-            params=params,
-            timeout=15,
-        )
+        src = source_lang if source_lang != "auto" else detected_any or "auto"
+        translated = GoogleTranslator(source=src, target=target_lang).translate(text)
+        if translated:
+            return translated
+    except Exception as exc:
+        print(f"Deep-translator Google error for '{text}': {exc}")
+
+    # Secondary: Lingva (Google-compatible proxy with free public instances)
+    try:
+        src = source_lang if source_lang != "auto" else detected_any or "auto"
+        quoted = requests.utils.quote(text)
+        url = f"{LINGVA_ENDPOINT}/api/v1/{src}/{target_lang}/{quoted}"
+        response = requests.get(url, timeout=15)
         response.raise_for_status()
         data = response.json()
-        if isinstance(data, list) and data:
-            translated_chunks = [chunk[0] for chunk in data[0] if chunk and chunk[0]]
-            translated = " ".join(translated_chunks).strip()
-            if translated:
-                return translated
+        translated = data.get("translation") if isinstance(data, dict) else ""
+        if translated:
+            return translated
     except Exception as exc:
-        print(f"Google translation error for '{text}': {exc}")
+        print(f"Lingva translation error for '{text}': {exc}")
 
-    # Secondary: LibreTranslate instances
+    # Tertiary: LibreTranslate instances
     for endpoint in LIBRETRANSLATE_ENDPOINTS:
         try:
             response = requests.post(f"{endpoint}/translate", data=payload, timeout=15)
