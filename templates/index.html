@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Oliwka Translator</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Warm &amp; friendly</p>
+          <h1>Polish-focused translations for Russian &amp; Spanish words</h1>
+          <p>
+            Paste single words or bracketed phrases. We will auto-detect the language, translate to Polish, add two cozy example sentences, and sort everything into nouns, verbs, adjectives, adverbs, or phrases.
+          </p>
+          <div id="status-banner" class="status-banner muted">Checking DeepSeek key…</div>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="controls">
+          <label for="entries">Words or phrases</label>
+          <textarea id="entries" rows="6" placeholder="ahorrar
+яблоко
+(llegar a un acuerdo)"></textarea>
+          <button id="translate-btn">Translate</button>
+        </div>
+        <div class="saved">
+          <div class="saved-header">
+            <h3>Saved dictionary (from Railway DB)</h3>
+            <button id="refresh-saved">Refresh</button>
+          </div>
+          <ul id="saved-list"></ul>
+        </div>
+      </section>
+
+      <section class="results" id="results"></section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
