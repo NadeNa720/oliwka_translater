@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Will you be my Valentine? 💕</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Quicksand:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Floating hearts background -->
+    <div class="hearts-bg" aria-hidden="true">
+        <div class="heart h1">♥</div>
+        <div class="heart h2">♥</div>
+        <div class="heart h3">♥</div>
+        <div class="heart h4">♥</div>
+        <div class="heart h5">♥</div>
+    </div>
+
+    <!-- Main question screen -->
+    <main id="question-screen" class="screen">
+        <div class="card">
+            <div class="photo-frame">
+                <!-- Replace src with your photo! Use a beautiful photo of you two together -->
+                <img src="our-photo.jpg" alt="Us together" class="main-photo" id="main-photo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="photo-placeholder" style="display: none;" aria-hidden="true">
+                    <span>📷</span>
+                    <p>Add your photo here</p>
+                    <small>Name the file "our-photo.jpg" and put it in the valentine folder</small>
+                </div>
+            </div>
+            <h1 class="question">Do you want to be my Valentine on February 14?</h1>
+            <div class="buttons">
+                <button type="button" class="btn btn-yes" id="btn-yes">Yes 💖</button>
+                <button type="button" class="btn btn-no" id="btn-no">No</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Yes! celebration screen (hidden until Yes is clicked) -->
+    <section id="yes-screen" class="screen hidden">
+        <div class="celebration">
+            <div class="confetti" aria-hidden="true"></div>
+            <h2 class="yes-title">Yes! 💕</h2>
+            <p class="yes-subtitle">I'm so happy you said yes!</p>
+            <div class="photos-grid">
+                <!-- Add more photos: replace src and add more img tags -->
+                <div class="photo-box">
+                    <img src="photo1.jpg" alt="Us" onerror="this.style.display='none'; this.parentElement.classList.add('placeholder');">
+                </div>
+                <div class="photo-box">
+                    <img src="photo2.jpg" alt="Us" onerror="this.style.display='none'; this.parentElement.classList.add('placeholder');">
+                </div>
+                <div class="photo-box">
+                    <img src="photo3.jpg" alt="Us" onerror="this.style.display='none'; this.parentElement.classList.add('placeholder');">
+                </div>
+            </div>
+            <p class="love-text">I love you. Happy Valentine's Day! 🌹</p>
+        </div>
+    </section>
+
+    <script src="script.js"></script>
+</body>
+</html>
